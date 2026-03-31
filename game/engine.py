@@ -9,6 +9,7 @@ ensuring 100% accuracy.
 import os
 import subprocess
 import json
+import sys
 import time
 
 from django.conf import settings
@@ -18,7 +19,20 @@ class ChessGame:
     """Manage a single chess game: state, validation, and engine communication."""
 
     CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-    ENGINE_PATH = os.path.join(CURRENT_DIR, 'engine', 'main')
+    ENGINE_DIR = os.path.join(CURRENT_DIR, 'engine')
+    ENGINE_CANDIDATES = (
+        [
+            os.path.join(ENGINE_DIR, 'main.exe'),
+            os.path.join(ENGINE_DIR, 'main'),
+            os.path.join(ENGINE_DIR, 'main.py'),
+        ]
+        if os.name == 'nt' else
+        [
+            os.path.join(ENGINE_DIR, 'main'),
+            os.path.join(ENGINE_DIR, 'main.exe'),
+            os.path.join(ENGINE_DIR, 'main.py'),
+        ]
+    )
     FILES = 'abcdefgh'
 
     INITIAL_BOARD = [
@@ -94,13 +108,29 @@ class ChessGame:
     #  C++ engine communication
     # ------------------------------------------------------------------
 
+    @classmethod
+    def _resolve_engine_path(cls):
+        """Return the first available engine entrypoint for this platform."""
+        for path in cls.ENGINE_CANDIDATES:
+            if os.path.exists(path):
+                return path
+        return None
+
+    @staticmethod
+    def _build_engine_command(engine_path):
+        """Build the subprocess command for either a binary or Python script."""
+        if engine_path.endswith('.py'):
+            return [sys.executable, engine_path]
+        return [engine_path]
+
     def _call_engine(self, command):
         """Run the C++ engine with *command* on stdin and return stdout."""
-        if not os.path.exists(self.ENGINE_PATH):
+        engine_path = self._resolve_engine_path()
+        if not engine_path:
             return None
         try:
             proc = subprocess.Popen(
-                [self.ENGINE_PATH],
+                self._build_engine_command(engine_path),
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,

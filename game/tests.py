@@ -1,8 +1,59 @@
 """Tests for the Checkora chess engine and API endpoints."""
 
 import json
+import sys
+from unittest import mock
 
-from django.test import TestCase
+from django.test import SimpleTestCase, TestCase
+
+from .engine import ChessGame
+
+
+class EnginePathResolutionTest(SimpleTestCase):
+    """Engine path selection should work across local platforms."""
+
+    def test_uses_first_existing_engine_binary(self):
+        candidates = [
+            r'C:\fake\game\engine\main.exe',
+            '/fake/game/engine/main',
+            r'C:\fake\game\engine\main.py',
+        ]
+
+        with (
+            mock.patch.object(ChessGame, 'ENGINE_CANDIDATES', candidates),
+            mock.patch('game.engine.os.path.exists', side_effect=lambda path: path == candidates[0]),
+        ):
+            self.assertEqual(ChessGame._resolve_engine_path(), candidates[0])
+
+    def test_prefers_cpp_binary_before_python_fallback(self):
+        candidates = [
+            r'C:\fake\game\engine\main.exe',
+            '/fake/game/engine/main',
+            r'C:\fake\game\engine\main.py',
+        ]
+
+        with (
+            mock.patch.object(ChessGame, 'ENGINE_CANDIDATES', candidates),
+            mock.patch('game.engine.os.path.exists', side_effect=lambda path: path in {candidates[1], candidates[2]}),
+        ):
+            self.assertEqual(ChessGame._resolve_engine_path(), candidates[1])
+
+    def test_falls_back_to_python_engine_script(self):
+        candidates = [
+            r'C:\fake\game\engine\main.exe',
+            '/fake/game/engine/main',
+            r'C:\fake\game\engine\main.py',
+        ]
+
+        with (
+            mock.patch.object(ChessGame, 'ENGINE_CANDIDATES', candidates),
+            mock.patch('game.engine.os.path.exists', side_effect=lambda path: path == candidates[2]),
+        ):
+            self.assertEqual(ChessGame._resolve_engine_path(), candidates[2])
+            self.assertEqual(
+                ChessGame._build_engine_command(candidates[2]),
+                [sys.executable, candidates[2]],
+            )
 
 
 class BoardViewTest(TestCase):
