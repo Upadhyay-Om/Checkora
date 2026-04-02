@@ -147,12 +147,23 @@ class ChessGame:
         except (subprocess.TimeoutExpired, OSError):
             return None
 
+    def _get_ai_search_depth(self):
+        """Return appropriate search depth based on which engine is available."""
+        engine_path = self._resolve_engine_path()
+        if not engine_path:
+            return self.AI_SEARCH_DEPTH_PYTHON
+        # C++ binary is much faster than Python, use deeper search
+        if engine_path.endswith('.py'):
+            return self.AI_SEARCH_DEPTH_PYTHON
+        return self.AI_SEARCH_DEPTH_CPP
+
     def serialize_castling_rights(self):
+        """Serialize castling rights to a string for the C++ engine."""
         rights = ''
-        if self.castling_rights.get('w_k'): rights += 'K'
-        if self.castling_rights.get('w_q'): rights += 'Q'
-        if self.castling_rights.get('b_k'): rights += 'k'
-        if self.castling_rights.get('b_q'): rights += 'q'
+        if self.castling_rights['w_k']: rights += 'K'
+        if self.castling_rights['w_q']: rights += 'Q'
+        if self.castling_rights['b_k']: rights += 'k'
+        if self.castling_rights['b_q']: rights += 'q'
         return rights if rights else '-'
 
     # ------------------------------------------------------------------
@@ -399,7 +410,8 @@ class ChessGame:
     #  AI -- Minimax via C++ engine
     # ------------------------------------------------------------------
 
-    AI_SEARCH_DEPTH = 3  # plies (increase for stronger play, slower response)
+    AI_SEARCH_DEPTH_CPP = 4  # C++ is much faster, can search deeper
+    AI_SEARCH_DEPTH_PYTHON = 3  # Python engine needs conservative depth
 
     def get_ai_move(self):
         """Ask the C++ engine to compute the best move using minimax.
@@ -409,7 +421,8 @@ class ChessGame:
         """
         board_str = self.serialize_board()
         rights_str = self.serialize_castling_rights()
-        cmd = f"BESTMOVE {board_str} {rights_str} {self.current_turn} {self.AI_SEARCH_DEPTH}"
+        depth = self._get_ai_search_depth()
+        cmd = f"BESTMOVE {board_str} {rights_str} {self.current_turn} {depth}"
         resp = self._call_engine(cmd)
 
         if not resp or not resp.startswith("BESTMOVE"):
