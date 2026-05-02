@@ -202,6 +202,8 @@ class ChessGame:
             return False, reason, None, 'active'
 
         captured = self.board[tr][tc]
+        board_before = self.serialize_board()
+        rights_before = self.serialize_castling_rights()
 
         if piece == 'K':
             self.castling_rights['w_k'] = False
@@ -251,8 +253,8 @@ class ChessGame:
         if captured:
             self.captured[self.current_turn].append(captured)
 
-        notation = self._notation(fr, fc, tr, tc, piece, captured)
-        if promoted:
+        notation = self._notation(fr, fc, tr, tc, piece, captured, board_before, rights_before)
+        if promoted and '=' not in notation:
             notation += '=' + (self.board[tr][tc] or 'Q').upper()
         self.move_history.append({
             'notation': notation,
@@ -375,9 +377,18 @@ class ChessGame:
             return False
         return (piece == 'P' and tr == 0) or (piece == 'p' and tr == 7)
 
-    def _notation(self, fr, fc, tr, tc, piece, captured):
-        to_sq = f"{self.FILES[fc]}{8 - fr} -> {self.FILES[tc]}{8 - tr}"
-        return to_sq
+    def _notation(self, fr, fc, tr, tc, piece, captured, board_str=None, rights_str=None):
+        """Generate SAN notation via C++ engine if possible, else simplified fallback."""
+        if board_str and rights_str:
+            cmd = f"NOTATION {board_str} {rights_str} {self.current_turn} {fr} {fc} {tr} {tc}"
+            resp = self._call_engine(cmd)
+            if resp and resp.startswith("NOTATION"):
+                parts = resp.split()
+                if len(parts) >= 2:
+                    return parts[1]
+
+        # Fallback: simplified notation
+        return f"{self.FILES[fc]}{8 - fr} -> {self.FILES[tc]}{8 - tr}"
 
     @staticmethod
     def _color(piece):
