@@ -268,21 +268,7 @@ jobs:
         continue-on-error: false
 
 # ───────────────────────────────────────────────────────────────────
-# JOB 6 — Vercel Deploy Check
+# NOTE: Deployment is handled natively by Vercel's GitHub integration.
+# Vercel auto-deploys on every push to main and creates preview
+# deployments for every PR — no separate deploy job needed here.
 # ───────────────────────────────────────────────────────────────────
-  vercel-deploy-check:
-    name: 🌐 Vercel Deploy Check
-    runs-on: ubuntu-latest
-    needs: [test, migrate-check, security]
-    
-    steps:
-      - name: ⏳ Wait for Vercel Preview/Production Deployment
-        uses: patrickedqvist/wait-for-vercel-preview@06c79330064b0e6ef7a2574603b62d3c98789125 # v1.3.2
-        id: waitForVercel
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          max_timeout: 300
-      
-      - name: 🌐 Display Vercel URL
-        run: |
-          echo "Vercel Deployment is ready: ${{ steps.waitForVercel.outputs.url }}"
