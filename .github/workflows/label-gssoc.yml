@@ -34,13 +34,19 @@ jobs:
               });
             } catch (err) {
               if (err.status === 404) {
-                await github.rest.issues.createLabel({
-                  owner,
-                  repo,
-                  name: label,
-                  color,
-                  description
-                });
+                try {
+                  await github.rest.issues.createLabel({
+                    owner,
+                    repo,
+                    name: label,
+                    color,
+                    description
+                  });
+                } catch (createErr) {
+                  if (createErr.status !== 422) {
+                    throw createErr;
+                  }
+                }
               } else {
                 throw err;
               }
