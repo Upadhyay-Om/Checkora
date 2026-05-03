@@ -1,9 +1,11 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Checkora | AI Chess</title>
+    <link rel="icon" type="image/jpeg" href="{% static 'game/favicon.jpeg' %}">
     
     <!-- Vercel Speed Insights -->
     <script>
@@ -43,6 +45,47 @@
             vertical-align: super;
             font-weight: 400;
             letter-spacing: 1px;
+        }
+
+        .auth-buttons {
+            position: absolute;
+            right: 20px;
+            top: 25px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .welcome-msg {
+            color: #8a8aaa;
+            font-size: 0.9rem;
+        }
+        .username {
+            color: #f0c040;
+            font-weight: 600;
+        }
+        .btn-logout {
+            color: #ff6b6b;
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 600;
+            padding: 5px 10px;
+            border-radius: 4px;
+            background: rgba(255, 107, 107, 0.1);
+        }
+        .btn-signin {
+            color: #f0c040;
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+        .btn-register {
+            background: #f0c040;
+            color: #1a1a2a;
+            text-decoration: none;
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 600;
         }
 
         /* ============================================================
@@ -473,6 +516,16 @@
     <!-- ========== HEADER ========== -->
     <div class="header">
         <h1>Checkora <span class="badge" id="modeBadge">PVP</span></h1>
+        
+        <div class="auth-buttons">
+            {% if user.is_authenticated %}
+                <span class="welcome-msg">Welcome, <span class="username">{{ user.username }}</span></span>
+                <a href="{% url 'logout' %}" class="btn-logout">Logout</a>
+            {% else %}
+                <a href="{% url 'login' %}" class="btn-signin">Sign In</a>
+                <a href="{% url 'register' %}" class="btn-register">Register</a>
+            {% endif %}
+        </div>
     </div>
 
     <!-- ========== GAME ========== -->
