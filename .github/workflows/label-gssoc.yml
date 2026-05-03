@@ -19,7 +19,7 @@ jobs:
             const repo = context.repo.repo;
             const issue_number = context.payload.issue.number;
             const label = 'GSSoC';
-            const color = '#D97706';
+            const color = '#FD873D';
             const description = 'Under GirlScript Summer of Code';
 
             try {
