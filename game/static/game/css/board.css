@@ -350,6 +350,12 @@ body {
 }
 
 @media (max-width: 768px) {
+    :root {
+        --board-border-width: 3px;
+        --mobile-board-size: min(calc(100vw - 52px), 480px);
+        --mobile-square-size: calc((var(--mobile-board-size) - (var(--board-border-width) * 2)) / 8);
+    }
+
     .header {
         padding: 16px 0 10px;
     }
@@ -384,10 +390,11 @@ body {
     }
 
     .chessboard {
-        width: min(calc(100vw - 52px), 480px);
-        height: min(calc(100vw - 52px), 480px);
-        grid-template-columns: repeat(8, 1fr);
-        grid-template-rows: repeat(8, 1fr);
+        width: var(--mobile-board-size);
+        height: var(--mobile-board-size);
+        border-width: var(--board-border-width);
+        grid-template-columns: repeat(8, var(--mobile-square-size));
+        grid-template-rows: repeat(8, var(--mobile-square-size));
     }
 
     .square {
@@ -396,7 +403,7 @@ body {
     }
 
     .ranks span {
-        height: calc(min(calc(100vw - 52px), 480px) / 8);
+        height: var(--mobile-square-size);
     }
 
     .files {
@@ -404,7 +411,7 @@ body {
     }
 
     .files span {
-        width: calc(min(calc(100vw - 52px), 480px) / 8);
+        width: var(--mobile-square-size);
     }
 
     .piece,
