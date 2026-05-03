@@ -680,6 +680,8 @@
             if (response.valid) {
                 gameOver = true;
                 paused = true;
+        
+                clearInterval(timerInterval);
 
                 const wName = document.getElementById('whiteNameLabel').textContent;
                 const bName = document.getElementById('blackNameLabel').textContent;
@@ -719,6 +721,36 @@
             console.error("Resign failed:", error);
         }
     };
+    function generateFEN() {
+    let fenRows = [];
+    for (let r = 0; r < 8; r++) {
+        let row = '';
+        let empty = 0;
+        for (let c = 0; c < 8; c++) {
+            const p = board[r][c];
+            if (!p) { empty++; }
+            else {
+                if (empty > 0) { row += empty; empty = 0; }
+                row += p;
+            }
+        }
+        if (empty > 0) row += empty;
+        fenRows.push(row);
+    }
+        const activeColor = turn === 'white' ? 'w' : 'b';
+        const movesList = movesEl.querySelectorAll('.move-row');
+        const fullMove = movesList.length + 1;
+        return `${fenRows.join('/')} ${activeColor} KQkq - 0 ${fullMove}`;
+    }
 
+    async function copyFEN() {
+        const fen = generateFEN();
+        await navigator.clipboard.writeText(fen);
+        showStatus('FEN copied to clipboard!', false);
+        setTimeout(() => showStatus('', false), 2000);
+    }
+
+    const copyFenBtn = document.getElementById('copyFenBtn');
+    if (copyFenBtn) copyFenBtn.onclick = copyFEN;
     loadGame();
 })();
