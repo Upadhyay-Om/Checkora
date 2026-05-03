@@ -229,3 +229,20 @@ def ai_move(request):
     })
 
 
+@require_POST
+def offer_draw(request):
+    """Handle draw offers and agreements."""
+    game_data = request.session.get('game')
+    if not game_data:
+        return JsonResponse({'success': False, 'message': 'No active game.'}, status=400)
+
+    data = json.loads(request.body or '{}')
+    action = data.get('action') # 'offer' or 'accept'
+    
+    if action == 'accept':
+        game_data['game_status'] = 'draw_agreement'
+        request.session['game'] = game_data
+        request.session.modified = True
+        return JsonResponse({'success': True, 'game_status': 'draw_agreement'})
+    
+    return JsonResponse({'success': True})

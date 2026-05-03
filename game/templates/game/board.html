@@ -5,6 +5,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Checkora | AI Chess</title>
+
+    <!-- Vercel Speed Insights -->
+    <script>
+        window.si = window.si || function () { (window.siq = window.siq || []).push(arguments); };
+    </script>
+    <script defer src="/_vercel/speed-insights/script.js"></script>
+
     <style>
         /* ============================================================
            Reset & Base
@@ -175,6 +182,10 @@
             justify-content: center;
             align-items: center;
             position: relative;
+            cursor: default;
+        }
+
+        .square:has(.piece.playable) {
             cursor: pointer;
         }
 
@@ -241,6 +252,10 @@
             z-index: 2;
             pointer-events: none;
             user-select: none;
+        }
+
+        .piece.playable {
+            cursor: pointer;
         }
 
         .piece.dragging {
@@ -505,6 +520,12 @@
             pointer-events: none;
         }
     </style>
+
+    <!-- Vercel Web Analytics -->
+    <script>
+        window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+    </script>
+    <script defer src="/_vercel/insights/script.js"></script>
 </head>
 
 <body>
@@ -590,6 +611,7 @@
                 <div style="display: flex; flex-direction: column; gap: 8px;">
                     <button class="btn btn-gold" id="newPvPBtn">Pass & Play (PvP)</button>
                     <button class="btn btn-gold" id="newAIBtn">Play vs AI</button>
+                    <button class="btn btn-gold" id="drawBtn" style="display: none;">Offer Draw</button>
                     <button class="btn" id="resignBtn" style="background: #333; color: #fff;">Resign</button>
                 </div>
             </div>
@@ -605,14 +627,26 @@
 
     <div class="promo-overlay" id="confirmOverlay">
         <div class="promo-dialog">
-            <div class="promo-title" style="color: #ff6b6b;">Abandon Game?</div>
-            <p style="color: #aaa; margin-bottom: 20px; font-size: 0.9rem; letter-spacing: 0.5px;">
+            <div class="promo-title" id="confirmTitle" style="color: #ff6b6b;">Abandon Game?</div>
+            <p id="confirmMessage" style="color: #aaa; margin-bottom: 20px; font-size: 0.9rem; letter-spacing: 0.5px;">
                 Your current progress will be lost.<br>Are you sure you want to start a new game?
             </p>
             <div style="display: flex; gap: 12px; justify-content: center;">
                 <button class="btn btn-gold" id="confirmYesBtn" style="width: 90px;">Yes</button>
                 <button class="btn" id="confirmNoBtn"
                     style="width: 90px; background: #333; color: #fff;">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="promo-overlay" id="drawOverlay">
+        <div class="promo-dialog">
+            <div class="promo-title">Draw Offer</div>
+            <p id="drawMessage" style="color: #ccc; margin-bottom: 20px; font-size: 1rem;"></p>
+            <div style="display: flex; gap: 12px; justify-content: center;">
+                <button class="btn btn-gold" id="drawAcceptBtn" style="width: 90px;">Accept</button>
+                <button class="btn" id="drawDeclineBtn"
+                    style="width: 90px; background: #333; color: #fff;">Decline</button>
             </div>
         </div>
     </div>
@@ -673,7 +707,7 @@
             let gameMode = 'pvp';
 
             /* ==========================================================
-            DOM REFERENCES (Sab ek jagah)
+            DOM REFERENCES
             ========================================================== */
             const boardEl = document.getElementById('board');
             const turnEl = document.getElementById('turnBadge');
@@ -685,23 +719,33 @@
             const promoOverlay = document.getElementById('promoOverlay');
             const promoChoices = document.getElementById('promoChoices');
             const modeBadge = document.getElementById('modeBadge');
-            const resignBtn = document.getElementById('resignBtn');
 
-            // Welcome and confirmation screen variables
             const welcomeOverlay = document.getElementById('welcomeOverlay');
             const welcomeResumeBtn = document.getElementById('welcomeResumeBtn');
             const welcomePvPBtn = document.getElementById('welcomePvPBtn');
             const welcomeAIBtn = document.getElementById('welcomeAIBtn');
+
             const confirmOverlay = document.getElementById('confirmOverlay');
+            const confirmTitle = document.getElementById('confirmTitle');
+            const confirmMessage = document.getElementById('confirmMessage');
             const confirmYesBtn = document.getElementById('confirmYesBtn');
             const confirmNoBtn = document.getElementById('confirmNoBtn');
+
             const newPvPBtn = document.getElementById('newPvPBtn');
             const newAIBtn = document.getElementById('newAIBtn');
+
             const gameOverOverlay = document.getElementById('gameOverOverlay');
             const gameOverTitle = document.getElementById('gameOverTitle');
             const gameOverMessage = document.getElementById('gameOverMessage');
             const gameOverPvPBtn = document.getElementById('gameOverPvPBtn');
             const gameOverAIBtn = document.getElementById('gameOverAIBtn');
+
+            const resignBtn = document.getElementById('resignBtn');
+            const drawBtn = document.getElementById('drawBtn');
+            const drawOverlay = document.getElementById('drawOverlay');
+            const drawMessage = document.getElementById('drawMessage');
+            const drawAcceptBtn = document.getElementById('drawAcceptBtn');
+            const drawDeclineBtn = document.getElementById('drawDeclineBtn');
 
             let gameOver = false;
 
@@ -747,12 +791,14 @@
                 gameMode = data.mode || 'pvp';
                 if (modeBadge) modeBadge.textContent = gameMode === 'ai' ? 'VS AI' : 'PVP';
 
-                // Show Resume button if move history exists, hide otherwise
+                // Show Resume button if move history exists
                 if (data.move_history && data.move_history.length > 0) {
                     if (welcomeResumeBtn) welcomeResumeBtn.style.display = 'block';
                 } else {
                     if (welcomeResumeBtn) welcomeResumeBtn.style.display = 'none';
                 }
+
+                if (drawBtn) drawBtn.style.display = gameMode === 'pvp' ? 'block' : 'none';
 
                 updateTurn();
                 updateMoves(data.move_history);
@@ -798,6 +844,20 @@
                     el.appendChild(img);
                 }
                 refreshHighlights();
+                markPlayable();
+            }
+
+            function markPlayable() {
+                boardEl.querySelectorAll('.piece').forEach(img => {
+                    const el = img.closest('.square');
+                    const idx = Array.from(boardEl.children).indexOf(el);
+                    const r = Math.floor(idx / 8);
+                    const c = idx % 8;
+                    const p = board[r][c];
+                    const isPlayable = p && pColor(p) === turn
+                        && !(gameMode === 'ai' && turn === 'black');
+                    img.classList.toggle('playable', isPlayable);
+                });
             }
 
             function refreshHighlights() {
@@ -829,7 +889,6 @@
                 const p = board[r][c];
                 if (!p || pColor(p) !== turn || paused || gameOver) return;
 
-                // AI LOCK: Ignore clicks when it is Black's turn in AI mode
                 if (gameMode === 'ai' && turn === 'black') {
                     showStatus("Waiting for AI to move...", false);
                     return;
@@ -847,9 +906,6 @@
                 refreshHighlights();
             }
 
-            /* ==============================================================
-               Promotion modal helpers
-               ============================================================== */
             function isPromotionMove(fr, fc, tr) {
                 const p = board[fr][fc];
                 if (!p) return false;
@@ -889,9 +945,6 @@
                 await executeMove(fr, fc, tr, tc, choice);
             }
 
-            /* ==============================================================
-               Move execution
-               ============================================================== */
             async function tryMove(fr, fc, tr, tc) {
                 if (paused || gameOver) return;
                 const p = board[fr][fc];
@@ -932,21 +985,17 @@
                         renderClocks();
                         startTimer();
 
-                        // Check for game-ending conditions
                         if (data.game_status === 'checkmate') {
                             endGame('checkmate', turn);
-                            return;
                         } else if (data.game_status === 'stalemate') {
                             endGame('stalemate', turn);
-                            return;
                         } else if (data.game_status === 'check') {
                             showStatus(turn === 'white' ? 'White is in check!' : 'Black is in check!', true);
                         } else {
                             showStatus('', false);
                         }
 
-                        // Trigger AI response when it is the engine's turn
-                        if (gameMode === 'ai' && turn === 'black') {
+                        if (gameMode === 'ai' && turn === 'black' && !gameOver) {
                             requestAIMove();
                         }
                     } else {
@@ -958,9 +1007,6 @@
                 }
             }
 
-            /* ==============================================================
-               AI move request
-               ============================================================== */
             async function requestAIMove() {
                 if (gameOver) return;
                 showStatus('AI is thinking...', false);
@@ -984,13 +1030,10 @@
                         renderClocks();
                         startTimer();
 
-                        // Check for game-ending conditions
                         if (data.game_status === 'checkmate') {
                             endGame('checkmate', turn);
-                            return;
                         } else if (data.game_status === 'stalemate') {
                             endGame('stalemate', turn);
-                            return;
                         } else if (data.game_status === 'check') {
                             showStatus('You are in check!', true);
                         } else {
@@ -1021,7 +1064,7 @@
 
             function onDragStart(e, r, c) {
                 if (paused || pColor(board[r][c]) !== turn) return e.preventDefault();
-                if (gameMode === 'ai' && turn === 'black') return e.preventDefault(); // AI Lock
+                if (gameMode === 'ai' && turn === 'black') return e.preventDefault();
                 dragging = true;
                 dragSrc = { r, c };
                 selectPiece(r, c);
@@ -1041,6 +1084,10 @@
                 turnEl.className = 'turn-badge ' + turn;
                 document.getElementById('whiteClock').classList.toggle('active', turn === 'white');
                 document.getElementById('blackClock').classList.toggle('active', turn === 'black');
+                markPlayable();
+                if (!gameOver) {
+                    document.title = (turn === 'white' ? 'White to Move - Checkora' : 'Black to Move - Checkora');
+                }
             }
 
             function updateMoves(history) {
@@ -1053,10 +1100,10 @@
                     const row = document.createElement('div');
                     row.className = 'move-row';
                     row.innerHTML = `
-                    <span class="move-num">${i / 2 + 1}.</span>
-                    <span class="move-white">${history[i].notation}</span>
-                    ${history[i + 1] ? `<span class="move-black">${history[i + 1].notation}</span>` : ''}
-                `;
+                        <span class="move-num">${i / 2 + 1}.</span>
+                        <span class="move-white">${history[i].notation}</span>
+                        ${history[i + 1] ? `<span class="move-black">${history[i + 1].notation}</span>` : ''}
+                    `;
                     movesEl.appendChild(row);
                 }
             }
@@ -1074,12 +1121,11 @@
 
             function endGame(reason, color) {
                 if (gameOver) return;
-
                 gameOver = true;
                 paused = true;
                 clearInterval(timerInterval);
 
-                let title, message;
+                let title = '', message = '';
 
                 if (reason === 'checkmate') {
                     const winner = color === 'white' ? 'Black' : 'White';
@@ -1088,6 +1134,9 @@
                 } else if (reason === 'stalemate') {
                     title = 'Stalemate!';
                     message = 'The game is a draw.';
+                } else if (reason === 'draw') {
+                    title = 'Draw!';
+                    message = 'Draw by Agreement.';
                 } else if (reason === 'resign') {
                     const winner = color === 'white' ? 'Black' : 'White';
                     title = 'Resignation';
@@ -1098,7 +1147,9 @@
                 gameOverMessage.textContent = message;
                 gameOverOverlay.classList.add('active');
                 showStatus(title + ': ' + message, false);
+                document.title = 'Game Over - Checkora';
             }
+
             /* ==========================================================
             CLOCKS & PAUSE
             ========================================================== */
@@ -1148,61 +1199,45 @@
                 startTimer();
             }
 
-            pauseBtn.onclick = () => paused ? resumeGame() : pauseGame();
-
-            document.addEventListener('visibilitychange', () => {
-                if (document.hidden) pauseGame();
-            });
-
-            window.addEventListener('beforeunload', () => {
-                if (!paused) {
-                    navigator.sendBeacon('/api/pause/', JSON.stringify({
-                        pause: true,
-                        white_time: whiteTime,
-                        black_time: blackTime
-                    }));
-                }
-            });
-
             /* ==========================================================
             WELCOME & CONFIRMATION LOGIC
             ========================================================== */
-            let pendingMode = null;
-
-            // Welcome screen logic
-            if (welcomePvPBtn) welcomePvPBtn.onclick = () => { welcomeOverlay.classList.remove('active'); startNewGame('pvp'); };
-            if (welcomeAIBtn) welcomeAIBtn.onclick = () => { welcomeOverlay.classList.remove('active'); startNewGame('ai'); };
-            if (welcomeResumeBtn) welcomeResumeBtn.onclick = () => {
-                welcomeOverlay.classList.remove('active');
-                if (paused) resumeGame();
-            };
-
-            function requestNewGame(mode) {
-                pendingMode = mode;
+            let confirmCallback = null;
+            function showConfirm(title, msg, callback, titleColor = '#ff6b6b') {
+                if (confirmTitle) {
+                    confirmTitle.textContent = title;
+                    confirmTitle.style.color = titleColor;
+                }
+                if (confirmMessage) confirmMessage.innerHTML = msg;
+                confirmCallback = callback;
                 confirmOverlay.classList.add('active');
             }
 
-            if (confirmYesBtn) confirmYesBtn.onclick = () => {
-                confirmOverlay.classList.remove('active');
-                if (pendingMode) startNewGame(pendingMode);
-            };
+            function requestNewGame(mode) {
+                showConfirm(
+                    "Abandon Game?",
+                    "Your current progress will be lost.<br>Are you sure you want to start a new game?",
+                    () => startNewGame(mode),
+                    '#ff6b6b'
+                );
+            }
 
-            if (confirmNoBtn) confirmNoBtn.onclick = () => {
-                confirmOverlay.classList.remove('active');
-                pendingMode = null;
-            };
+            async function offerDraw() {
+                if (paused || gameOver || gameMode !== 'pvp') return;
+                const offeringPlayer = turn === 'white' ? 'White' : 'Black';
+                const receivingPlayer = turn === 'white' ? 'Black' : 'White';
 
-            if (newPvPBtn) newPvPBtn.onclick = () => requestNewGame('pvp');
-            if (newAIBtn) newAIBtn.onclick = () => requestNewGame('ai');
-
-            if (gameOverPvPBtn) gameOverPvPBtn.onclick = () => { gameOverOverlay.classList.remove('active'); startNewGame('pvp'); };
-            if (gameOverAIBtn) gameOverAIBtn.onclick = () => { gameOverOverlay.classList.remove('active'); startNewGame('ai'); };
-
-            if (resignBtn) resignBtn.onclick = () => {
-                if (!gameOver && !paused) {
-                    endGame('resign', turn);
-                }
-            };
+                showConfirm(
+                    "Offer Draw?",
+                    `As <b>${offeringPlayer}</b>, do you want to offer a draw to ${receivingPlayer}?`,
+                    async () => {
+                        drawMessage.textContent = `${offeringPlayer} offers a draw. ${receivingPlayer}, do you accept?`;
+                        drawOverlay.classList.add('active');
+                        await pauseGame();
+                    },
+                    '#f0c040'
+                );
+            }
 
             async function startNewGame(mode) {
                 const d = await post('/api/new-game/', { mode: mode });
@@ -1220,7 +1255,61 @@
             }
 
             /* ==========================================================
-            INIT (Game yahan se shuru hota hai)
+            EVENT LISTENERS
+            ========================================================== */
+            if (welcomePvPBtn) welcomePvPBtn.onclick = () => { welcomeOverlay.classList.remove('active'); startNewGame('pvp'); };
+            if (welcomeAIBtn) welcomeAIBtn.onclick = () => { welcomeOverlay.classList.remove('active'); startNewGame('ai'); };
+            if (welcomeResumeBtn) welcomeResumeBtn.onclick = () => {
+                welcomeOverlay.classList.remove('active');
+                if (paused) resumeGame();
+            };
+
+            if (confirmYesBtn) confirmYesBtn.onclick = () => {
+                confirmOverlay.classList.remove('active');
+                if (confirmCallback) confirmCallback();
+                confirmCallback = null;
+            };
+            if (confirmNoBtn) confirmNoBtn.onclick = () => {
+                confirmOverlay.classList.remove('active');
+                confirmCallback = null;
+            };
+
+            if (newPvPBtn) newPvPBtn.onclick = () => requestNewGame('pvp');
+            if (newAIBtn) newAIBtn.onclick = () => requestNewGame('ai');
+
+            if (pauseBtn) pauseBtn.onclick = () => paused ? resumeGame() : pauseGame();
+
+            if (resignBtn) resignBtn.onclick = () => {
+                if (!gameOver && !paused) {
+                    showConfirm("Resign?", "Are you sure you want to resign?", () => endGame('resign', turn));
+                }
+            };
+
+            if (drawBtn) drawBtn.onclick = offerDraw;
+            if (drawAcceptBtn) drawAcceptBtn.onclick = async () => {
+                drawOverlay.classList.remove('active');
+                const data = await post('/api/draw/', { action: 'accept' });
+                if (data.success) endGame('draw', turn);
+            };
+            if (drawDeclineBtn) drawDeclineBtn.onclick = () => {
+                drawOverlay.classList.remove('active');
+                resumeGame();
+            };
+
+            if (gameOverPvPBtn) gameOverPvPBtn.onclick = () => { gameOverOverlay.classList.remove('active'); startNewGame('pvp'); };
+            if (gameOverAIBtn) gameOverAIBtn.onclick = () => { gameOverOverlay.classList.remove('active'); startNewGame('ai'); };
+
+            document.addEventListener('visibilitychange', () => { if (document.hidden) pauseGame(); });
+            window.addEventListener('beforeunload', () => {
+                if (!paused) {
+                    navigator.sendBeacon('/api/pause/', JSON.stringify({
+                        pause: true, white_time: whiteTime, black_time: blackTime
+                    }));
+                }
+            });
+
+            /* ==========================================================
+            INIT
             ========================================================== */
             loadGame();
         })();

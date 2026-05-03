@@ -10,4 +10,5 @@ urlpatterns = [
     path('api/state/', views.get_state, name='get_state'),
     path('api/pause/', views.set_pause),
     path('api/ai-move/', views.ai_move, name='ai_move'),
+    path('api/draw/', views.offer_draw, name='offer_draw'),
 ]
