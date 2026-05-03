@@ -88,6 +88,11 @@ def new_game(request):
     data = json.loads(request.body or '{}')
     mode = data.get('mode', 'pvp')
     
+    # --- Capture and store names in the session ---
+    # We use .get('key', 'Default') so it never crashes
+    request.session['white_name'] = data.get('white_name', 'White')
+    request.session['black_name'] = data.get('black_name', 'Black')
+
     game = ChessGame()
     game.mode = mode
     
@@ -99,7 +104,10 @@ def new_game(request):
         'current_turn': game.current_turn,
         'move_history': [],
         'captured_pieces': {'white': [], 'black': []},
-        'mode': game.mode
+        'mode': game.mode,
+        # We send names back just to confirm they were saved
+        'white_name': request.session['white_name'],
+        'black_name': request.session['black_name'],
     })
 
 @require_GET
@@ -156,6 +164,8 @@ def get_state(request):
         'move_history': game.move_history,
         'captured_pieces': game.captured,
         'mode': game.mode,
+        'white_name': request.session.get('white_name', 'White'),
+        'black_name': request.session.get('black_name', 'Black'),
     })
 
 @csrf_exempt
@@ -244,7 +254,7 @@ def offer_draw(request):
         request.session['game'] = game_data
         request.session.modified = True
         return JsonResponse({'success': True, 'game_status': 'draw_agreement'})
-    
+        
     return JsonResponse({'success': True})
 
 @require_POST
