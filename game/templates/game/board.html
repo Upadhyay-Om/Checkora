@@ -368,6 +368,15 @@
                         d.onclick = () => onClick(r, c);
                         d.ondragover = e => e.preventDefault();
                         d.ondrop = e => onDrop(e, r, c);
+
+                        // ADD THESE LINES RIGHT HERE — before boardEl.appendChild(d)
+                        d.setAttribute('tabindex', '0');
+                        d.setAttribute('role', 'gridcell');
+                        d.setAttribute('data-row', r);
+                        d.setAttribute('data-col', c);
+                        d.setAttribute('aria-label', getSquareLabel(r, c));
+                        d.onkeydown = (e) => handleSquareKeydown(e, r, c);
+
                         boardEl.appendChild(d);
                     }
                 }
@@ -427,7 +436,46 @@
                     });
                 }
             }
+            
+            // converts row/col to chess notation e.g. row=0,col=0 → "a8"
+            function getSquareLabel(row, col) {
+                const files = ['a','b','c','d','e','f','g','h'];
+                const ranks = ['8','7','6','5','4','3','2','1'];
+                    return files[col] + ranks[row];
+            }
 
+            // Arrow keys to move focus, Enter/Space to click, Escape to cancel
+            function handleSquareKeydown(e, row, col) {
+                let newRow = row;
+                let newCol = col;
+
+                switch (e.key) {
+                    case 'ArrowUp':    e.preventDefault(); newRow = row - 1; break;
+                    case 'ArrowDown':  e.preventDefault(); newRow = row + 1; break;
+                    case 'ArrowLeft':  e.preventDefault(); newCol = col - 1; break;
+                    case 'ArrowRight': e.preventDefault(); newCol = col + 1; break;
+                    case 'Enter':
+                    case ' ':
+                        e.preventDefault();
+                        onClick(row, col); // reuses your existing click logic
+                        return;
+                    case 'Escape':
+                        e.preventDefault();
+                        // deselect — clear any selected piece highlight
+                        document.querySelectorAll('.square.selected')
+                                .forEach(s => s.classList.remove('selected'));
+                    return;
+                default:
+                    return;
+             }
+          // clamp within board
+            newRow = Math.max(0, Math.min(7, newRow));
+            newCol = Math.max(0, Math.min(7, newCol));                // move focus to the new square
+            const target = boardEl.querySelector(
+                `[data-row="${newRow}"][data-col="${newCol}"]`
+            );
+            if (target) target.focus(); 
+                        }
             /* ==========================================================
             SELECTION & MOVES
             ========================================================== */
