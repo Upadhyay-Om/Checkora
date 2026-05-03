@@ -103,9 +103,12 @@ def new_game(request):
     # We use .get('key', 'Default') so it never crashes
     request.session['white_name'] = data.get('white_name', 'White')
     request.session['black_name'] = data.get('black_name', 'Black')
+    player_color = data.get('player_color', 'white')
 
     game = ChessGame()
     game.mode = mode
+    game.player_color = player_color
+    game.paused = False
 
     request.session['game'] = game.to_dict()
     request.session.modified = True
@@ -116,6 +119,7 @@ def new_game(request):
         'move_history': [],
         'captured_pieces': {'white': [], 'black': []},
         'mode': game.mode,
+        'player_color': game.player_color,
         # We send names back just to confirm they were saved
         'white_name': request.session['white_name'],
         'black_name': request.session['black_name'],
@@ -177,6 +181,7 @@ def get_state(request):
         'move_history': game.move_history,
         'captured_pieces': game.captured,
         'mode': game.mode,
+        'player_color': game.player_color,
         'white_name': request.session.get('white_name', 'White'),
         'black_name': request.session.get('black_name', 'Black'),
     })

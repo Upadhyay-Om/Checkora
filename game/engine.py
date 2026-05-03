@@ -79,6 +79,7 @@ class ChessGame:
         self.last_ts = time.time()
         self.paused = False
         self.mode = 'pvp'
+        self.player_color = 'white'
         self.castling_rights = {
             'w_k': True, 'w_q': True,
             'b_k': True, 'b_q': True
@@ -100,6 +101,7 @@ class ChessGame:
             'last_ts': self.last_ts,
             'paused': self.paused,
             'mode': self.mode,
+            'player_color': self.player_color,
             'castling_rights': self.castling_rights
         }
 
@@ -116,6 +118,7 @@ class ChessGame:
         game.black_time = data['black_time']
         game.last_ts = data['last_ts']
         game.mode = data.get('mode', 'pvp')
+        game.player_color = data.get('player_color', 'white')
         game.castling_rights = data.get('castling_rights', {'w_k': True, 'w_q': True, 'b_k': True, 'b_q': True})
 
         game.valid_moves_cache = {}
