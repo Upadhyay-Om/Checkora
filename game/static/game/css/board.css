@@ -432,6 +432,8 @@ body {
         right: auto;
         top: auto;
         gap: 10px;
+        flex-wrap: wrap;
+        justify-content: center;
     }
 
     .game-layout {
