@@ -366,6 +366,14 @@
             const drawAcceptBtn = document.getElementById('drawAcceptBtn');
             const drawDeclineBtn = document.getElementById('drawDeclineBtn');
 
+            const whiteNameLabel = document.getElementById('whiteNameLabel');
+            const blackNameLabel = document.getElementById('blackNameLabel');
+            const whiteYouTag = document.getElementById('whiteYouTag');
+            const blackYouTag = document.getElementById('blackYouTag');
+            const whiteCapturedName = document.getElementById('whiteCapturedName');
+            const blackCapturedName = document.getElementById('blackCapturedName');
+            const turnBadgeText = document.getElementById('turnBadgeText');
+
             let gameOver = false;
 
             /* ==========================================================
@@ -449,6 +457,7 @@
 
                 if (drawBtn) drawBtn.style.display = gameMode === 'pvp' ? 'block' : 'none';
 
+                updatePlayerNames(data);
                 updateTurn();
                 updateMoves(data.move_history);
                 updateCaptured(data.captured_pieces);
@@ -458,6 +467,30 @@
                 updatePauseUI();
                 startTimer();
             }
+
+            function updatePlayerNames(data) {
+                let wName = data.white_name || 'White';
+                let bName = data.black_name || 'Black';
+                
+                if (gameMode === 'ai') {
+                    if (playerColor === 'white') bName = bName + ' (AI)';
+                    else wName = wName + ' (AI)';
+                }
+
+                if (whiteNameLabel) whiteNameLabel.textContent = wName.toUpperCase();
+                if (blackNameLabel) blackNameLabel.textContent = bName.toUpperCase();
+                if (whiteCapturedName) whiteCapturedName.textContent = wName;
+                if (blackCapturedName) blackCapturedName.textContent = bName;
+
+                if (gameMode === 'ai') {
+                    if (whiteYouTag) whiteYouTag.style.display = (playerColor === 'white') ? 'inline' : 'none';
+                    if (blackYouTag) blackYouTag.style.display = (playerColor === 'black') ? 'inline' : 'none';
+                } else {
+                    if (whiteYouTag) whiteYouTag.style.display = 'none';
+                    if (blackYouTag) blackYouTag.style.display = 'none';
+                }
+            }
+
 
             /* ==========================================================
             BOARD RENDERING
@@ -695,6 +728,7 @@
 
                         selected = null;
                         hints = [];
+                        updatePlayerNames(data);
                         updateTurn();
                         updateMoves(data.move_history);
                         updateCaptured(data.captured_pieces);
@@ -739,6 +773,7 @@
 
                         selected = null;
                         hints = [];
+                        updatePlayerNames(data);
                         updateTurn();
                         updateMoves(data.move_history);
                         updateCaptured(data.captured_pieces);
@@ -800,6 +835,9 @@
                 badge.className = 'turn-badge ' + turn;
                 
                 let label = turn.charAt(0).toUpperCase() + turn.slice(1) + "'s Turn";
+                const pName = turn === 'white' ? whiteNameLabel.textContent : blackNameLabel.textContent;
+                label = pName + "'s Turn";
+                
                 if (gameMode === 'ai') {
                     if (turn === playerColor) {
                         label = "Your Turn";
@@ -808,6 +846,7 @@
                     }
                 }
                 badge.textContent = label;
+                if (turnBadgeText) turnBadgeText.textContent = pName;
                 
                 wCapEl.classList.toggle('active', turn === 'white');
                 bCapEl.classList.toggle('active', turn === 'black');
@@ -862,8 +901,10 @@
                     message = 'Draw by Agreement.';
                 } else if (reason === 'resign') {
                     const winner = color === 'white' ? 'Black' : 'White';
+                    const winnerName = color === 'white' ? blackNameLabel.textContent : whiteNameLabel.textContent;
+                    const loserName = color === 'white' ? whiteNameLabel.textContent : blackNameLabel.textContent;
                     title = 'Resignation';
-                    message = `${color.charAt(0).toUpperCase() + color.slice(1)} resigned. ${winner} wins!`;
+                    message = `${loserName} resigned. ${winnerName} wins!`;
                 }
 
                 gameOverTitle.textContent = title;
