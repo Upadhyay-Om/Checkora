@@ -1235,9 +1235,14 @@
                     e.returnValue = '';
                 }
             });
+            
 
-            /* ==========================================================
-            INIT
-            ========================================================== */
-            loadGame();
-        })();
+          if (typeof module !== "undefined" && module.exports) {
+          module.exports = { pColor, getSquareLabel, formatTime };
+        } else {
+          loadGame();
+        }
+
+})();
+
+
