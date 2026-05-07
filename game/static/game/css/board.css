@@ -945,3 +945,22 @@ body {
                     0 0 20px rgba(220, 38, 38, 0.4);
     }
 }
+
+/* ================= INPUT TRANSITIONS ================= */
+#whiteNameInput,
+#blackNameInput {
+    transition: all 0.3s ease;
+}
+
+#whiteNameInput:focus,
+#blackNameInput:focus {
+    border-color: #f0c040;
+    box-shadow: 0 0 0 2px rgba(240, 192, 64, 0.2);
+    outline: none;
+}
+
+/* Error state */
+.input-error {
+    border-color: #ff6b6b !important;
+    box-shadow: 0 0 0 2px rgba(255, 107, 107, 0.2) !important;
+}
